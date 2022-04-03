@@ -1,6 +1,6 @@
 package com.orness.web.requests;
 
-//import com.orness.spring_boot_app.web.validation.UniqueEmail;
+import com.orness.web.validation.UniqueEmail;
 import lombok.Data;
 
 import javax.validation.constraints.Email;
@@ -22,7 +22,7 @@ public class HeroCreationRequest {
     private String lastname;
     @NotBlank
     @Email(message = "Email should be valid")
-    //@UniqueEmail
+    @UniqueEmail
     private String mail;
     @Max(value = 150, message = "age should not be more than 150")
     @Min(value = 0, message = "age should not be less than 0")
