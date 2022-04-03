@@ -58,4 +58,44 @@ public class HeroResourceTest {
                 .statusCode(204);
     }
 
+
+    @Test
+    @TestTransaction
+    public void testCreateHeroWrongEmail() {
+
+        given()
+                .body("""
+                        {
+                            "firstname": "Tony",
+                            "lastname": "Straks",
+                            "mail": "wrong",
+                            "age": 35
+                        }
+                        """)
+                .contentType(ContentType.JSON)
+                .when().post("/heroes")
+                .then()
+                .statusCode(400);
+    }
+
+
+    @Test
+    @TestTransaction
+    public void testCreateHeroDuplicateEmail() {
+
+        given()
+                .body("""
+                        {
+                            "firstname": "Tony",
+                            "lastname": "Straks",
+                            "mail": "steve.rogers@marvel.com",
+                            "age": 35
+                        }
+                        """)
+                .contentType(ContentType.JSON)
+                .when().post("/heroes")
+                .then()
+                .statusCode(400);
+    }
+
 }
