@@ -12,19 +12,19 @@ import javax.validation.constraints.Size;
 
 @Data
 public class HeroCreationRequest {
-    @NotBlank(message = "firstname should not be left blank")
-    @Size(min = 1, max = 200, message = "firstname should not be longer than 200 characters")
-    @Pattern(regexp = "^[a-zA-Z\\-À-ÿ' ]*$", message = "There should be no special characters in the firstname")//\p{L}
+    @NotBlank(message = "{blank.firstname.message}")
+    @Size(min = 1, max = 200, message = "{size.message}")
+    @Pattern(regexp = "^\\p{L}*$", message = "{letters.message}")
     private String firstname;
-    @NotBlank(message = "lastname should not be left blank")
-    @Size(min = 1, max = 200, message = "lastname should not be longer than 200 characters")
-    @Pattern(regexp = "^[a-zA-Z\\-À-ÿ' ]*$", message = "There should be no special characters in the lastname")
+    @NotBlank(message = "{blank.lastname.message}")
+    @Size(min = 1, max = 200, message = "{size.message}")
+    @Pattern(regexp = "^\\p{L}*$", message = "{letters.message}")
     private String lastname;
     @NotBlank
-    @Email(message = "Email should be valid")
-    @UniqueEmail
+    @Email(message = "{email.invalid.message}")
+    @UniqueEmail(message = "{duplicate.mail.message}")
     private String mail;
-    @Max(value = 150, message = "age should not be more than 150")
-    @Min(value = 0, message = "age should not be less than 0")
+    @Max(value = 150, message = "{age.lower.message}")
+    @Min(value = 0, message = "{age.greater.message}")
     private Integer age;
 }

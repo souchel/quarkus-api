@@ -11,7 +11,8 @@ public class HeroRepository implements PanacheRepository<HeroEntity> {
     public Optional<HeroEntity> findByMail(String mail) {
         return find("mail", mail).firstResultOptional();
     }
-    public boolean existsByMail(String mail){
+
+    public boolean existsByMail(String mail) {
         return count("mail", mail) != 0L;
     }
 }
