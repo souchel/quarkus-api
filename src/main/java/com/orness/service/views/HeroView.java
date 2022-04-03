@@ -8,6 +8,6 @@ public class HeroView {
     //private UUID id;
     private String firstname;
     private String lastname;
-    private int age;
+    private Integer age;
     private String mail;
 }
