@@ -1,3 +1,4 @@
+    @Produces(MediaType.TEXT_PLAIN)
 *
 !target/*-runner
 !target/*-runner.jar
