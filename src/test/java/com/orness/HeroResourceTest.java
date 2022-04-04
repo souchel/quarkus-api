@@ -1,24 +1,57 @@
 package com.orness;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.orness.data.HeroEntity;
+import com.orness.data.HeroRepository;
 import com.orness.web.HeroResource;
 import com.orness.web.requests.HeroCreationRequest;
 import com.orness.web.responses.ErrorResponse;
 import com.orness.web.responses.HeroResponse;
 import io.quarkus.test.TestTransaction;
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import javax.inject.Inject;
+import java.text.MessageFormat;
+import java.util.Optional;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static io.restassured.RestAssured.given;
 
 @QuarkusTest
+@QuarkusTestResource(value = WireMockAgify.class, restrictToAnnotatedClass = true)
 @TestHTTPEndpoint(HeroResource.class)
 public class HeroResourceTest {
+
+    @InjectAgifyMock
+    WireMockServer wireMockServer;
+
+    @Inject
+    HeroRepository heroRepository;
+
+    @BeforeEach
+    void setUp() {
+        wireMockServer.resetAll();
+        WireMock.configureFor(wireMockServer.port());
+    }
 
     @Test
     public void testGetHeroEndpoint() {
@@ -62,8 +95,63 @@ public class HeroResourceTest {
                 .when().post("")
                 .then()
                 .statusCode(204);
+        verify(exactly(0), anyRequestedFor(anyUrl()));
+        Optional<HeroEntity> hero = heroRepository.findByMail("tony.starks@marvel.com");
+        Assertions.assertTrue(hero.isPresent());
+        Assertions.assertEquals(35, hero.get().getAge());
+        Assertions.assertEquals("tony.starks@marvel.com", hero.get().getMail());
     }
 
+    @Test
+    @TestTransaction
+    public void testCreateHeroWithoutAge() {
+        mockAgifyCall("tony", 55);
+        given()
+                .body("""
+                        {
+                            "firstname": "Tony",
+                            "lastname": "Starks",
+                            "mail": "tony.starks@marvel.com"
+                        }
+                        """)
+                .contentType(ContentType.JSON)
+                .when().post("")
+                .then()
+                .statusCode(204);
+        Optional<HeroEntity> hero = heroRepository.findByMail("tony.starks@marvel.com");
+        Assertions.assertTrue(hero.isPresent());
+        Assertions.assertEquals(55, hero.get().getAge());
+        Assertions.assertEquals("tony.starks@marvel.com", hero.get().getMail());
+    }
+
+    @Test
+    @TestTransaction
+    public void testCreateHeroWithFailedAgifyCall() {
+
+        stubFor(get(urlPathEqualTo("/")).withQueryParam("name", equalTo("tony")).willReturn(
+                aResponse().withStatus(500)
+        ));
+        Response response = given()
+                .body("""
+                        {
+                            "firstname": "Tony",
+                            "lastname": "Starks",
+                            "mail": "tony.starks@marvel.com"
+                        }
+                        """)
+                .contentType(ContentType.JSON)
+                .when().post("")
+                .then()
+                .statusCode(500)
+                .extract().response();
+        ErrorResponse error = response.jsonPath().getObject("$", ErrorResponse.class);
+
+        Assertions.assertEquals("Internal Error", error.title());
+        Assertions.assertNotNull(error.stacktraceId());
+
+        Optional<HeroEntity> hero = heroRepository.findByMail("tony.starks@marvel.com");
+        Assertions.assertTrue(hero.isEmpty());
+    }
 
     @ParameterizedTest
     @CsvSource(quoteCharacter = '"', textBlock = """
@@ -87,6 +175,19 @@ public class HeroResourceTest {
 
     private HeroCreationRequest getCreateHeroPayload(String firstname, String lastname, String mail, int age) {
         return new HeroCreationRequest(firstname, lastname, mail, age);
+    }
+
+    private void mockAgifyCall(String firstname, int age) {
+        String body = MessageFormat.format("""
+                '{'
+                    "name": "{0}",
+                    "age": {1},
+                    "count": 1
+                '}'
+                """, firstname, Integer.toString(age));
+        stubFor(get(urlPathEqualTo("/")).withQueryParam("name", equalTo(firstname)).willReturn(
+                okJson(body)
+        ));
     }
 
 }

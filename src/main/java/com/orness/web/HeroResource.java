@@ -11,15 +11,11 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Set;
 
 @Path("/heroes")
 @RequiredArgsConstructor
 public class HeroResource {
 
-    private final Set<HeroResponse> heroes = Collections.newSetFromMap(Collections.synchronizedMap(new LinkedHashMap<>()));
     private final HeroMapper heroMapper;
     private final IHeroService heroService;
 

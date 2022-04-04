@@ -17,6 +17,7 @@
     <surefire-plugin.version>3.0.0-M5</surefire-plugin.version>
     <lombok.version>1.18.22</lombok.version>
     <mapstruct.version>1.4.2.Final</mapstruct.version>
+    <wiremock.version>2.32.0</wiremock.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -96,6 +97,12 @@
       <groupId>io.rest-assured</groupId>
       <artifactId>rest-assured</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.tomakehurst</groupId>
+      <artifactId>wiremock-jre8</artifactId>
+      <scope>test</scope>
+      <version>${wiremock.version}</version>
     </dependency>
   </dependencies>
   <build>

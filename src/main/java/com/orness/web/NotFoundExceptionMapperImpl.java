@@ -9,7 +9,7 @@ import javax.ws.rs.ext.Provider;
 import java.util.UUID;
 
 @Provider
-public class ExceptionMapperImpl implements ExceptionMapper<EntityNotFoundException> {
+public class NotFoundExceptionMapperImpl implements ExceptionMapper<EntityNotFoundException> {
 
     public Response toResponse(EntityNotFoundException x) {
         ErrorResponse response = new ErrorResponse(x.getMessage(), UUID.randomUUID(), "Not Found");
