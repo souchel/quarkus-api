@@ -1,23 +1,29 @@
 package com.orness;
 
+import com.orness.web.HeroResource;
+import com.orness.web.requests.HeroCreationRequest;
 import com.orness.web.responses.ErrorResponse;
 import com.orness.web.responses.HeroResponse;
 import io.quarkus.test.TestTransaction;
+import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static io.restassured.RestAssured.given;
 
 @QuarkusTest
+@TestHTTPEndpoint(HeroResource.class)
 public class HeroResourceTest {
 
     @Test
     public void testGetHeroEndpoint() {
         Response response = given()
-          .when().get("/heroes/{mail}", "steve.rogers@marvel.com")
+          .when().get("{mail}", "steve.rogers@marvel.com")
           .then()
              .statusCode(200)
              .contentType(ContentType.JSON)
@@ -29,7 +35,7 @@ public class HeroResourceTest {
     @Test
     public void testGetHeroEndpointNotFound() {
         Response response = given()
-          .when().get("/heroes/{mail}", "wrong")
+          .when().get("{mail}", "wrong")
           .then()
              .statusCode(404)
              .contentType(ContentType.JSON)
@@ -47,55 +53,40 @@ public class HeroResourceTest {
                 .body("""
                         {
                             "firstname": "Tony",
-                            "lastname": "Straks",
+                            "lastname": "Starks",
                             "mail": "tony.starks@marvel.com",
                             "age": 35
                         }
                         """)
                 .contentType(ContentType.JSON)
-                .when().post("/heroes")
+                .when().post("")
                 .then()
                 .statusCode(204);
     }
 
 
-    @Test
+    @ParameterizedTest
+    @CsvSource(quoteCharacter = '"', textBlock = """
+            # FIRSTNAME,       LASTNAME,     MAIL,                       AGE
+            Tony,                Stark,      wrong,                      35
+            Tony,                Starks2,    wrong@marvel.com,           35
+            Tony,                Starks,     steve.rogers@marvel.com,    35
+            Tony,                Starks,     steve.rogers@marvel.com,    200
+            ,                    Starks ,    steve.rogers@marvel.com,    35
+            """)
     @TestTransaction
-    public void testCreateHeroWrongEmail() {
+    public void testCreateHeroWrongEmail(String firstname, String lastname, String mail, int age) {
 
         given()
-                .body("""
-                        {
-                            "firstname": "Tony",
-                            "lastname": "Straks",
-                            "mail": "wrong",
-                            "age": 35
-                        }
-                        """)
+                .body(getCreateHeroPayload(firstname, lastname, mail, age))
                 .contentType(ContentType.JSON)
-                .when().post("/heroes")
+                .when().post()
                 .then()
                 .statusCode(400);
     }
 
-
-    @Test
-    @TestTransaction
-    public void testCreateHeroDuplicateEmail() {
-
-        given()
-                .body("""
-                        {
-                            "firstname": "Tony",
-                            "lastname": "Straks",
-                            "mail": "steve.rogers@marvel.com",
-                            "age": 35
-                        }
-                        """)
-                .contentType(ContentType.JSON)
-                .when().post("/heroes")
-                .then()
-                .statusCode(400);
+    private HeroCreationRequest getCreateHeroPayload(String firstname, String lastname, String mail, int age) {
+        return new HeroCreationRequest(firstname, lastname, mail, age);
     }
 
 }

@@ -1,7 +1,9 @@
 package com.orness.web.requests;
 
 import com.orness.web.validation.UniqueEmail;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.Max;
@@ -11,6 +13,8 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class HeroCreationRequest {
     @NotBlank(message = "{blank.firstname.message}")
     @Size(min = 1, max = 200, message = "{size.message}")
