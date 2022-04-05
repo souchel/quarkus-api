@@ -8,10 +8,12 @@ import com.orness.web.HeroResource;
 import com.orness.web.requests.HeroCreationRequest;
 import com.orness.web.responses.ErrorResponse;
 import com.orness.web.responses.HeroResponse;
-import io.quarkus.test.TestTransaction;
+import com.orness.web.responses.PageResponse;
+import io.agroal.api.AgroalDataSource;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.common.http.TestHTTPEndpoint;
 import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.common.mapper.TypeRef;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.Assertions;
@@ -21,6 +23,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import javax.inject.Inject;
+import javax.transaction.Transactional;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.MessageFormat;
 import java.util.Optional;
 
@@ -47,10 +54,23 @@ public class HeroResourceTest {
     @Inject
     HeroRepository heroRepository;
 
+    @Inject
+    AgroalDataSource dataSource;
+
     @BeforeEach
+    @Transactional(Transactional.TxType.REQUIRES_NEW)
+    // look here https://github.com/quarkusio/quarkus/issues/5523
     void setUp() {
         wireMockServer.resetAll();
         WireMock.configureFor(wireMockServer.port());
+        final String truncate = "TRUNCATE TABLE heroEntity";
+        try (final Connection con = dataSource.getConnection();
+             final Statement stmt = con.createStatement()) {
+            stmt.executeUpdate(truncate);
+            stmt.executeUpdate(new String(getClass().getClassLoader().getResourceAsStream("import.sql").readAllBytes()));
+        } catch (SQLException | IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
@@ -63,6 +83,20 @@ public class HeroResourceTest {
              .extract().response();
         HeroResponse body = response.jsonPath().getObject("$", HeroResponse.class);
         Assertions.assertEquals(new HeroResponse("Steve", "Rogers", 35, "steve.rogers@marvel.com"), body);
+    }
+
+    @Test
+    public void testGetHeroesEndpoint() {
+        Response response = given()
+          .when().get("")
+          .then()
+             .statusCode(200)
+             .contentType(ContentType.JSON)
+             .extract().response();
+        TypeRef<PageResponse<HeroResponse>> typeRef
+                = new TypeRef<>() {};
+        PageResponse<HeroResponse> body = response.jsonPath().getObject("$", typeRef);
+        Assertions.assertEquals(2, body.count());
     }
 
     @Test
@@ -79,7 +113,6 @@ public class HeroResourceTest {
 
 
     @Test
-    @TestTransaction
     public void testCreateHero() {
 
         given()
@@ -103,7 +136,6 @@ public class HeroResourceTest {
     }
 
     @Test
-    @TestTransaction
     public void testCreateHeroWithoutAge() {
         mockAgifyCall("tony", 55);
         given()
@@ -125,7 +157,6 @@ public class HeroResourceTest {
     }
 
     @Test
-    @TestTransaction
     public void testCreateHeroWithFailedAgifyCall() {
 
         stubFor(get(urlPathEqualTo("/")).withQueryParam("name", equalTo("tony")).willReturn(
@@ -162,7 +193,6 @@ public class HeroResourceTest {
             Tony,                Starks,     steve.rogers@marvel.com,    200
             ,                    Starks ,    steve.rogers@marvel.com,    35
             """)
-    @TestTransaction
     public void testCreateHeroWrongEmail(String firstname, String lastname, String mail, int age) {
 
         given()
