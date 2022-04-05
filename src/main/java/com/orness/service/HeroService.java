@@ -4,6 +4,7 @@ import com.orness.clients.AgifyClient;
 import com.orness.clients.AgifyDTO;
 import com.orness.data.HeroRepository;
 import com.orness.service.views.HeroView;
+import com.orness.service.views.PageView;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
@@ -33,12 +34,17 @@ public class HeroService implements IHeroService{
     }
 
     @Override
+    public PageView<HeroView> getHeroes(int pageIndex, int pageSize) {
+        return heroViewMapper.entitiesToViews(heroRepository.findAll(pageIndex, pageSize));
+    }
+
+    @Override
     @Transactional
     public void registerHero(HeroView heroView) {
         if (heroView.getAge() == null) {
             AgifyDTO dto = agifyClient.getByName(StringUtils.lowerCase(StringUtils.stripAccents(heroView.getFirstname())));
             heroView.setAge(dto.age());
         }
-        heroRepository.persistAndFlush(heroViewMapper.viewToEntity(heroView));
+        heroRepository.persist(heroViewMapper.viewToEntity(heroView));
     }
 }
